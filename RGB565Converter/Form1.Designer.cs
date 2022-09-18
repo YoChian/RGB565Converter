@@ -55,6 +55,7 @@
 			this.statusLabel = new System.Windows.Forms.Label();
 			this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
 			this.imageLoadLabel = new System.Windows.Forms.Label();
+			this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.groupBox1.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.YPercentageBox)).BeginInit();
@@ -343,6 +344,7 @@
 			this.abortButton.TabIndex = 7;
 			this.abortButton.Text = "中止";
 			this.abortButton.UseVisualStyleBackColor = true;
+			this.abortButton.Click += new System.EventHandler(this.abortButton_Click);
 			// 
 			// statusLabel
 			// 
@@ -370,6 +372,11 @@
 			this.imageLoadLabel.Size = new System.Drawing.Size(195, 46);
 			this.imageLoadLabel.TabIndex = 9;
 			this.imageLoadLabel.Text = "无预览图像";
+			// 
+			// backgroundWorker1
+			// 
+			this.backgroundWorker1.WorkerReportsProgress = true;
+			this.backgroundWorker1.WorkerSupportsCancellation = true;
 			// 
 			// Form1
 			// 
@@ -429,6 +436,7 @@
 		private System.Windows.Forms.Label statusLabel;
 		private System.Windows.Forms.SaveFileDialog saveFileDialog1;
 		private System.Windows.Forms.Label imageLoadLabel;
+		private System.ComponentModel.BackgroundWorker backgroundWorker1;
 	}
 }
 

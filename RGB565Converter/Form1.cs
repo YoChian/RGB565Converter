@@ -17,10 +17,15 @@ namespace RGB565Converter
 	{
 		private Image image;
 		private bool scale = true;
+		private Bitmap bmp;
+		private byte[] data;
 
 		public Form1()
 		{
 			InitializeComponent();
+			backgroundWorker1.DoWork += BackgroundWorker1_DoWork;
+			backgroundWorker1.RunWorkerCompleted += BackgroundWorker1_RunWorkerCompleted;
+			backgroundWorker1.ProgressChanged += BackgroundWorker1_ProgressChanged;
 		}
 
 		private void pictureSelectButton_Click(object sender, EventArgs e)
@@ -185,28 +190,46 @@ namespace RGB565Converter
 			linkButton.BackColor=scale ? SystemColors.Highlight : SystemColors.Control;
 		}
 
-		private async void convertButton_Click(object sender, EventArgs e)
+		private void convertButton_Click(object sender, EventArgs e)
 		{
 			//检查输出路径是否有效
-			string imageName;
 			try
 			{
-				File.Create(outputPathBox.Text);
+				FileStream fs = File.Create(outputPathBox.Text);
+				fs.Close();
 			}
 			catch (Exception)
 			{
 				statusLabel.Text = "输出路径不正确";
 			}
-			imageName = Path.GetFileNameWithoutExtension(outputPathBox.Text);
 
-			Bitmap bmp = (Bitmap)image;
+			bmp = (Bitmap)image;
 			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
 										ImageLockMode.ReadWrite,
 										PixelFormat.Format24bppRgb);
 			int size = bmp.Width * bmp.Height * 3;
-			byte[] data = new byte[size];
+			data = new byte[size];
 			IntPtr intPtr = bitmapData.Scan0;
 			Marshal.Copy(intPtr, data, 0, size);
+			bmp.UnlockBits(bitmapData);
+			backgroundWorker1.RunWorkerAsync();
+		}
+
+		private void BackgroundWorker1_ProgressChanged(object sender, ProgressChangedEventArgs e)
+		{
+			progressBar1.Value = e.ProgressPercentage;
+			statusLabel.Text = $"转换中...{e.ProgressPercentage}%";
+		}
+
+		private void BackgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
+		{
+			if (e.Cancelled)
+			{
+				statusLabel.Text = "转换已中止";
+				
+				return;
+			}
+			string imageName = Path.GetFileNameWithoutExtension(outputPathBox.Text);
 			string[] fileString =
 			{
 				"#if defined(__AVR__)",
@@ -217,23 +240,41 @@ namespace RGB565Converter
 				"    #define PROGMEM",
 				"#endif",
 				"",
-				"const unsigned short " + imageName + "[841] PROGMEM={",
-				"",
+				$"const unsigned short {imageName}[{(bmp.Width*bmp.Height).ToString()}] PROGMEM={{",
+				e.Result as String,
 				"};",
 			};
-			
+			File.WriteAllLines(outputPathBox.Text, fileString);
+			statusLabel.Text = "转换完成";
+		}
+
+		private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
+		{
+			string dataString = "";
 			for (int i = 0; i < bmp.Width; i++)
 			{
 				for (int j = 0; j < bmp.Height; j++)
 				{
 					int ptr = (j * bmp.Width + i) * 3;
-					Int16 colorVar = (Int16)((data[ptr] >> 3)<<11 + (data[ptr + 1] >> 2)<<5 + data[ptr+2]>>3);
-					fileString[9] += "0x" + colorVar.ToString("X4") + ", ";
-					progressBar1.Value = (i * bmp.Width + j + 1) / (bmp.Width * bmp.Height) * 100;
+					Int16 B = (Int16)((data[ptr] >> 3) << 11);
+					Int16 G = (Int16)((data[ptr + 1] >> 2) << 5);
+					Int16 R = (Int16)(data[ptr + 2] >> 3);
+					Int16 colorVar = (Int16)(R | G | B);
+					dataString += "0x" + colorVar.ToString("X4") + ", ";
+					backgroundWorker1.ReportProgress((i * bmp.Height + j + 1) * 100 / (bmp.Width * bmp.Height));
+					if(backgroundWorker1.CancellationPending)
+					{
+						e.Cancel = true;
+						return;
+					}
 				}
 			}
-			File.WriteAllLines(outputPathBox.Text, fileString);
-			statusLabel.Text = "转换完成";
+			e.Result = dataString;
+		}
+
+		private void abortButton_Click(object sender, EventArgs e)
+		{
+			backgroundWorker1.CancelAsync();
 		}
 	}
 }
