@@ -263,7 +263,8 @@
 			// 
 			// openFileDialog1
 			// 
-			this.openFileDialog1.Filter = "JPG文件|*.jpg;*.jpe;*.jpeg|PNG文件|*.png|BMP文件|*.bmp|GIF文件|*.gif";
+			this.openFileDialog1.Filter = "所有支持的文件|*.jpg;*.jpe;*.jpeg;*.png;*.bmp;*.gif|JPG文件|*.jpg;*.jpe;*.jpeg|PNG文件|*.png" +
+    "|BMP文件|*.bmp|GIF文件|*.gif";
 			this.openFileDialog1.Title = "选择转换的图像";
 			// 
 			// groupBox2

@@ -202,7 +202,7 @@ namespace RGB565Converter
 			{
 				statusLabel.Text = "输出路径不正确";
 			}
-
+			
 			bmp = (Bitmap)image;
 			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
 										ImageLockMode.ReadWrite,
@@ -251,14 +251,14 @@ namespace RGB565Converter
 		private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
 		{
 			string dataString = "";
-			for (int i = 0; i < bmp.Width; i++)
+			for (int i = 0; i < bmp.Height; i++)
 			{
-				for (int j = 0; j < bmp.Height; j++)
+				for (int j = 0; j < bmp.Width; j++)
 				{
-					int ptr = (j * bmp.Width + i) * 3;
-					Int16 B = (Int16)((data[ptr] >> 3) << 11);
-					Int16 G = (Int16)((data[ptr + 1] >> 2) << 5);
-					Int16 R = (Int16)(data[ptr + 2] >> 3);
+					int ptr = (j * bmp.Height + i) * 3;//从Bitmap转换得到的Byte数组按先列后行顺序排列，单个像素按BGR顺序排列
+					Int16 B = (Int16)((data[ptr] >> 3)&0x001F);
+					Int16 G = (Int16)(((data[ptr + 1] >> 2) << 5)&0x07E0);
+					Int16 R = (Int16)((data[ptr + 2] >> 3 <<11)&0xF800);
 					Int16 colorVar = (Int16)(R | G | B);
 					dataString += "0x" + colorVar.ToString("X4") + ", ";
 					backgroundWorker1.ReportProgress((i * bmp.Height + j + 1) * 100 / (bmp.Width * bmp.Height));
