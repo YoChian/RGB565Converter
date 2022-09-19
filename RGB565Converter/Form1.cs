@@ -36,7 +36,8 @@ namespace RGB565Converter
 				string ImagePath = openFileDialog1.FileName;
 				try
 				{
-					image = Image.FromFile(ImagePath);
+					image = Image.FromFile(ImagePath);	//只用于输入，转换为Bitmap后，后续操作都使用Bitmap完成
+					bmp = (Bitmap)image;
 				}
 				catch (Exception)
 				{
@@ -77,11 +78,11 @@ namespace RGB565Converter
 			YpxBox.Enabled = true;
 			XPercentageBox.Enabled = true;
 			YPercentageBox.Enabled = true;
-			XpxBox.Value = image.Width;
-			YpxBox.Value = image.Height;
+			XpxBox.Value = bmp.Width;
+			YpxBox.Value = bmp.Height;
 			XPercentageBox.Value = 100;
 			YPercentageBox.Value = 100;
-			pictureBox1.Image = image;
+			pictureBox1.Image = bmp;
 		}
 
 		private void outputPathButton_Click(object sender, EventArgs e)
@@ -114,7 +115,8 @@ namespace RGB565Converter
 				}
 				XpxBox.Value = XPercentageBox.Value / 100 * image.Width;
 			}
-			
+			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
+			pictureBox1.Image = bmp;
 		}
 
 		private void YpxBox_ValueChanged(object sender, EventArgs e)
@@ -137,7 +139,8 @@ namespace RGB565Converter
 				}
 				YpxBox.Value = YPercentageBox.Value / 100 * image.Height;
 			}
-			
+			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
+			pictureBox1.Image = bmp;
 		}
 
 		private void XPercentageBox_ValueChanged(object sender, EventArgs e)
@@ -160,6 +163,8 @@ namespace RGB565Converter
 				}
 				XPercentageBox.Value = XpxBox.Value / image.Width * 100;
 			}
+			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
+			pictureBox1.Image = bmp;
 		}
 
 		private void YPercentageBox_ValueChanged(object sender, EventArgs e)
@@ -182,12 +187,45 @@ namespace RGB565Converter
 				}
 				YPercentageBox.Value = YpxBox.Value / image.Height * 100;
 			}
+			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
+			pictureBox1.Image = bmp;
 		}
 
 		private void linkButton_Click(object sender, EventArgs e)
 		{
 			scale = !scale;
 			linkButton.BackColor=scale ? SystemColors.Highlight : SystemColors.Control;
+		}
+
+		private Bitmap ResizeImage(Image src, int width, int height)
+		{
+			Bitmap destBmp=new Bitmap(width, height);
+			Graphics g = Graphics.FromImage(destBmp);
+			g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+			g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+			g.DrawImage(src,
+			   new Rectangle(0, 0, width, height),
+			   new Rectangle(0, 0, src.Width, src.Height),
+			   GraphicsUnit.Pixel);
+			g.Dispose();
+			return destBmp;
+		}
+
+		private Bitmap ClipImage(Bitmap src, int left, int top, int right, int bottom)
+		{
+			Bitmap destBmp = new Bitmap(src.Width - left - right, src.Height - top - bottom);
+			Graphics g = Graphics.FromImage(destBmp);
+			g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+			g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+			g.DrawImage(src,
+			   new Rectangle(0, 0, src.Width - left - right, src.Height - top - bottom),
+			   new Rectangle(left, top, src.Width - right, src.Height - bottom),
+			   GraphicsUnit.Pixel);
+			g.Dispose();
+			return destBmp;
 		}
 
 		private void convertButton_Click(object sender, EventArgs e)
@@ -201,9 +239,9 @@ namespace RGB565Converter
 			catch (Exception)
 			{
 				statusLabel.Text = "输出路径不正确";
+				throw;
 			}
 			
-			bmp = (Bitmap)image;
 			BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
 										ImageLockMode.ReadWrite,
 										PixelFormat.Format24bppRgb);
@@ -212,6 +250,7 @@ namespace RGB565Converter
 			IntPtr intPtr = bitmapData.Scan0;
 			Marshal.Copy(intPtr, data, 0, size);
 			bmp.UnlockBits(bitmapData);
+			progressBar1.SetState(1);
 			backgroundWorker1.RunWorkerAsync();
 		}
 
@@ -226,7 +265,7 @@ namespace RGB565Converter
 			if (e.Cancelled)
 			{
 				statusLabel.Text = "转换已中止";
-				
+				progressBar1.SetState(2);
 				return;
 			}
 			string imageName = Path.GetFileNameWithoutExtension(outputPathBox.Text);
@@ -261,7 +300,7 @@ namespace RGB565Converter
 					Int16 R = (Int16)((data[ptr + 2] >> 3 <<11)&0xF800);
 					Int16 colorVar = (Int16)(R | G | B);
 					dataString += "0x" + colorVar.ToString("X4") + ", ";
-					backgroundWorker1.ReportProgress((i * bmp.Height + j + 1) * 100 / (bmp.Width * bmp.Height));
+					backgroundWorker1.ReportProgress((i * bmp.Width + j + 1) * 100 / (bmp.Width * bmp.Height));
 					if(backgroundWorker1.CancellationPending)
 					{
 						e.Cancel = true;
@@ -277,4 +316,15 @@ namespace RGB565Converter
 			backgroundWorker1.CancelAsync();
 		}
 	}
+
+	public static class ModifyProgressBarColor
+	{
+		[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = false)]
+		static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr w, IntPtr l);
+		public static void SetState(this ProgressBar pBar, int state)
+		{
+			SendMessage(pBar.Handle, 1040, (IntPtr)state, IntPtr.Zero);
+		}
+	}
+
 }
