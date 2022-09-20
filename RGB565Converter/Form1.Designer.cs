@@ -57,7 +57,6 @@
 			this.imageLoadLabel = new System.Windows.Forms.Label();
 			this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
 			this.groupBox3 = new System.Windows.Forms.GroupBox();
-			this.clipUnitSwitchButton = new System.Windows.Forms.Button();
 			this.unitLabel2 = new System.Windows.Forms.Label();
 			this.unitLabel1 = new System.Windows.Forms.Label();
 			this.BottomClipBox = new System.Windows.Forms.NumericUpDown();
@@ -106,7 +105,7 @@
 			this.groupBox1.Controls.Add(this.XpxBox);
 			this.groupBox1.Controls.Add(this.label2);
 			this.groupBox1.Controls.Add(this.label1);
-			this.groupBox1.Location = new System.Drawing.Point(276, 13);
+			this.groupBox1.Location = new System.Drawing.Point(275, 186);
 			this.groupBox1.Name = "groupBox1";
 			this.groupBox1.Size = new System.Drawing.Size(325, 84);
 			this.groupBox1.TabIndex = 1;
@@ -210,6 +209,11 @@
             0,
             0,
             0});
+			this.YpxBox.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
 			this.YpxBox.Name = "YpxBox";
 			this.YpxBox.Size = new System.Drawing.Size(100, 21);
 			this.YpxBox.TabIndex = 3;
@@ -226,6 +230,11 @@
 			this.XpxBox.Location = new System.Drawing.Point(24, 19);
 			this.XpxBox.Maximum = new decimal(new int[] {
             8192,
+            0,
+            0,
+            0});
+			this.XpxBox.Minimum = new decimal(new int[] {
+            1,
             0,
             0,
             0});
@@ -292,7 +301,7 @@
 			this.groupBox2.Controls.Add(this.label7);
 			this.groupBox2.Controls.Add(this.pictureSelectButton);
 			this.groupBox2.Controls.Add(this.picturePathBox);
-			this.groupBox2.Location = new System.Drawing.Point(277, 193);
+			this.groupBox2.Location = new System.Drawing.Point(275, 13);
 			this.groupBox2.Name = "groupBox2";
 			this.groupBox2.Size = new System.Drawing.Size(325, 76);
 			this.groupBox2.TabIndex = 4;
@@ -398,7 +407,6 @@
 			// 
 			// groupBox3
 			// 
-			this.groupBox3.Controls.Add(this.clipUnitSwitchButton);
 			this.groupBox3.Controls.Add(this.unitLabel2);
 			this.groupBox3.Controls.Add(this.unitLabel1);
 			this.groupBox3.Controls.Add(this.BottomClipBox);
@@ -409,22 +417,12 @@
 			this.groupBox3.Controls.Add(this.LeftClipBox);
 			this.groupBox3.Controls.Add(this.label13);
 			this.groupBox3.Controls.Add(this.label14);
-			this.groupBox3.Location = new System.Drawing.Point(276, 103);
+			this.groupBox3.Location = new System.Drawing.Point(275, 95);
 			this.groupBox3.Name = "groupBox3";
 			this.groupBox3.Size = new System.Drawing.Size(325, 84);
 			this.groupBox3.TabIndex = 10;
 			this.groupBox3.TabStop = false;
 			this.groupBox3.Text = "裁剪";
-			// 
-			// clipUnitSwitchButton
-			// 
-			this.clipUnitSwitchButton.FlatStyle = System.Windows.Forms.FlatStyle.System;
-			this.clipUnitSwitchButton.Location = new System.Drawing.Point(277, 33);
-			this.clipUnitSwitchButton.Name = "clipUnitSwitchButton";
-			this.clipUnitSwitchButton.Size = new System.Drawing.Size(38, 24);
-			this.clipUnitSwitchButton.TabIndex = 10;
-			this.clipUnitSwitchButton.Text = "单位";
-			this.clipUnitSwitchButton.UseVisualStyleBackColor = false;
 			// 
 			// unitLabel2
 			// 
@@ -456,6 +454,7 @@
 			this.BottomClipBox.Name = "BottomClipBox";
 			this.BottomClipBox.Size = new System.Drawing.Size(100, 21);
 			this.BottomClipBox.TabIndex = 7;
+			this.BottomClipBox.ValueChanged += new System.EventHandler(this.BottomClipBox_ValueChanged);
 			// 
 			// TopClipBox
 			// 
@@ -469,6 +468,7 @@
 			this.TopClipBox.Name = "TopClipBox";
 			this.TopClipBox.Size = new System.Drawing.Size(100, 21);
 			this.TopClipBox.TabIndex = 6;
+			this.TopClipBox.ValueChanged += new System.EventHandler(this.TopClipBox_ValueChanged);
 			// 
 			// label11
 			// 
@@ -500,6 +500,7 @@
 			this.RightClipBox.Name = "RightClipBox";
 			this.RightClipBox.Size = new System.Drawing.Size(100, 21);
 			this.RightClipBox.TabIndex = 3;
+			this.RightClipBox.ValueChanged += new System.EventHandler(this.RightClipBox_ValueChanged);
 			// 
 			// LeftClipBox
 			// 
@@ -513,6 +514,7 @@
 			this.LeftClipBox.Name = "LeftClipBox";
 			this.LeftClipBox.Size = new System.Drawing.Size(100, 21);
 			this.LeftClipBox.TabIndex = 2;
+			this.LeftClipBox.ValueChanged += new System.EventHandler(this.LeftClipBox_ValueChanged);
 			// 
 			// label13
 			// 
@@ -601,7 +603,6 @@
 		private System.Windows.Forms.Label imageLoadLabel;
 		private System.ComponentModel.BackgroundWorker backgroundWorker1;
 		private System.Windows.Forms.GroupBox groupBox3;
-		private System.Windows.Forms.Button clipUnitSwitchButton;
 		private System.Windows.Forms.Label unitLabel2;
 		private System.Windows.Forms.Label unitLabel1;
 		private System.Windows.Forms.NumericUpDown BottomClipBox;

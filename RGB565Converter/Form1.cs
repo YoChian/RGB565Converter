@@ -45,7 +45,7 @@ namespace RGB565Converter
 					throw;
 				}
 				picturePathBox.Text = ImagePath;
-				pictureSetup();
+				PictureSetup();
 			}
 		}
 
@@ -57,31 +57,69 @@ namespace RGB565Converter
 				if (!string.IsNullOrEmpty(ImagePath)&&!string.IsNullOrWhiteSpace(ImagePath)) 
 				{
 					image = Image.FromFile(ImagePath);
-					pictureSetup();
+					bmp = (Bitmap)image;
+					PictureSetup();
 				}
 			}
-			catch (System.IO.FileNotFoundException)
+			catch (FileNotFoundException)
 			{
 				imageLoadLabel.Visible = true;
 				pictureBox1.Image = null;
+
 				XpxBox.Enabled = false;
 				YpxBox.Enabled = false;
 				XPercentageBox.Enabled = false;
 				YPercentageBox.Enabled = false;
+
+				LeftClipBox.Enabled = false;
+				RightClipBox.Enabled = false;
+				TopClipBox.Enabled = false;
+				BottomClipBox.Enabled = false;
 			}
 		}
 
-		private void pictureSetup()
+		private void PictureSetup()
 		{
 			imageLoadLabel.Visible = false;
+
 			XpxBox.Enabled = true;
 			YpxBox.Enabled = true;
 			XPercentageBox.Enabled = true;
 			YPercentageBox.Enabled = true;
-			XpxBox.Value = bmp.Width;
-			YpxBox.Value = bmp.Height;
+
+			LeftClipBox.Enabled = true;
+			RightClipBox.Enabled = true;
+			TopClipBox.Enabled = true;
+			BottomClipBox.Enabled = true;
+
+			XpxBox.Value = image.Width;
+			YpxBox.Value = image.Height;
 			XPercentageBox.Value = 100;
 			YPercentageBox.Value = 100;
+
+			XPercentageBox.Minimum = 100 / image.Width;
+			YPercentageBox.Minimum = 100 / image.Height;
+
+			LeftClipBox.Value = 0;
+			RightClipBox.Value = 0;
+			TopClipBox.Value = 0;
+			BottomClipBox.Value = 0;
+
+			LeftClipBox.Minimum = 0;
+			RightClipBox.Minimum = 0;
+			TopClipBox.Minimum = 0;
+			BottomClipBox.Minimum = 0;
+
+			LeftClipBox.Maximum = image.Width - 1;
+			RightClipBox.Maximum = image.Width - 1;
+			TopClipBox.Maximum = image.Height - 1;
+			BottomClipBox.Maximum = image.Height - 1;
+
+			LeftClipBox.DecimalPlaces = 0;
+			RightClipBox.DecimalPlaces = 0;
+			TopClipBox.DecimalPlaces = 0;
+			BottomClipBox.DecimalPlaces = 0;
+
 			pictureBox1.Image = bmp;
 		}
 
@@ -115,8 +153,7 @@ namespace RGB565Converter
 				}
 				XpxBox.Value = XPercentageBox.Value / 100 * image.Width;
 			}
-			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
-			pictureBox1.Image = bmp;
+			UpdateImage();
 		}
 
 		private void YpxBox_ValueChanged(object sender, EventArgs e)
@@ -139,8 +176,7 @@ namespace RGB565Converter
 				}
 				YpxBox.Value = YPercentageBox.Value / 100 * image.Height;
 			}
-			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
-			pictureBox1.Image = bmp;
+			UpdateImage();
 		}
 
 		private void XPercentageBox_ValueChanged(object sender, EventArgs e)
@@ -163,8 +199,7 @@ namespace RGB565Converter
 				}
 				XPercentageBox.Value = XpxBox.Value / image.Width * 100;
 			}
-			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
-			pictureBox1.Image = bmp;
+			UpdateImage();
 		}
 
 		private void YPercentageBox_ValueChanged(object sender, EventArgs e)
@@ -187,24 +222,23 @@ namespace RGB565Converter
 				}
 				YPercentageBox.Value = YpxBox.Value / image.Height * 100;
 			}
-			bmp = ResizeImage(image, (int)XpxBox.Value, (int)YpxBox.Value);
-			pictureBox1.Image = bmp;
+			UpdateImage();
 		}
 
 		private void linkButton_Click(object sender, EventArgs e)
 		{
 			scale = !scale;
-			linkButton.BackColor=scale ? SystemColors.Highlight : SystemColors.Control;
+			linkButton.BackColor = scale ? SystemColors.Highlight : SystemColors.Control;
 		}
 
 		private Bitmap ResizeImage(Image src, int width, int height)
 		{
-			Bitmap destBmp=new Bitmap(width, height);
+			Bitmap destBmp = new Bitmap(width, height);
 			Graphics g = Graphics.FromImage(destBmp);
-			g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-			g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+			//g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+			//g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 			g.DrawImage(src,
 			   new Rectangle(0, 0, width, height),
 			   new Rectangle(0, 0, src.Width, src.Height),
@@ -213,19 +247,27 @@ namespace RGB565Converter
 			return destBmp;
 		}
 
-		private Bitmap ClipImage(Bitmap src, int left, int top, int right, int bottom)
+		private Bitmap ClipImage(Image src, int left, int top, int right, int bottom)
 		{
 			Bitmap destBmp = new Bitmap(src.Width - left - right, src.Height - top - bottom);
 			Graphics g = Graphics.FromImage(destBmp);
-			g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-			g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-			g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+			//g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+			//g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 			g.DrawImage(src,
 			   new Rectangle(0, 0, src.Width - left - right, src.Height - top - bottom),
 			   new Rectangle(left, top, src.Width - right, src.Height - bottom),
 			   GraphicsUnit.Pixel);
 			g.Dispose();
 			return destBmp;
+		}
+
+		private void UpdateImage()
+		{
+			Bitmap tmpBmp = ClipImage(image, (int)LeftClipBox.Value, (int)TopClipBox.Value, (int)RightClipBox.Value, (int)BottomClipBox.Value);
+			tmpBmp = ResizeImage(tmpBmp, (int)XpxBox.Value, (int)YpxBox.Value);
+			pictureBox1.Image = tmpBmp;
 		}
 
 		private void convertButton_Click(object sender, EventArgs e)
@@ -283,6 +325,7 @@ namespace RGB565Converter
 				e.Result as String,
 				"};",
 			};
+			statusLabel.Text = "写入文件中...";
 			File.WriteAllLines(outputPathBox.Text, fileString);
 			statusLabel.Text = "转换完成";
 		}
@@ -299,7 +342,7 @@ namespace RGB565Converter
 					Int16 G = (Int16)(((data[ptr + 1] >> 2) << 5)&0x07E0);
 					Int16 R = (Int16)((data[ptr + 2] >> 3 <<11)&0xF800);
 					Int16 colorVar = (Int16)(R | G | B);
-					dataString += "0x" + colorVar.ToString("X4") + ", ";
+					dataString += $"0x{colorVar.ToString("X4")}, ";
 					backgroundWorker1.ReportProgress((i * bmp.Width + j + 1) * 100 / (bmp.Width * bmp.Height));
 					if(backgroundWorker1.CancellationPending)
 					{
@@ -315,6 +358,31 @@ namespace RGB565Converter
 		{
 			backgroundWorker1.CancelAsync();
 		}
+
+		private void LeftClipBox_ValueChanged(object sender, EventArgs e)
+		{
+			RightClipBox.Maximum = image.Width - LeftClipBox.Value - 1;
+			UpdateImage();
+		}
+
+		private void RightClipBox_ValueChanged(object sender, EventArgs e)
+		{
+			LeftClipBox.Maximum = image.Width - RightClipBox.Value - 1;
+			UpdateImage();
+		}
+
+		private void TopClipBox_ValueChanged(object sender, EventArgs e)
+		{
+			BottomClipBox.Maximum = image.Height - TopClipBox.Value - 1;
+			UpdateImage();
+		}
+
+		private void BottomClipBox_ValueChanged(object sender, EventArgs e)
+		{
+			TopClipBox.Maximum = image.Height - BottomClipBox.Value - 1;
+			UpdateImage();
+		}
+
 	}
 
 	public static class ModifyProgressBarColor
