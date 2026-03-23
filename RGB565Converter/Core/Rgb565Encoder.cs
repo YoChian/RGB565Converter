@@ -52,7 +52,9 @@ namespace RGB565Converter.Core
 						int pixelIndex = (frame * frameSize) + (row * width) + column;
 						int ptr = pixelIndex * 3;
 						ushort color = EncodeBgr24(data[ptr], data[ptr + 1], data[ptr + 2]);
-						dataBuilder.AppendFormat("0x{0:X4}, ", color);
+						dataBuilder.Append("0x");
+						dataBuilder.Append(color.ToString("X4"));
+						dataBuilder.Append(", ");
 
 						progress?.Report((pixelIndex + 1) * 100 / totalWork);
 						if (cancellationRequested != null && cancellationRequested())

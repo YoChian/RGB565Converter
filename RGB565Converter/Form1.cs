@@ -13,7 +13,7 @@ namespace RGB565Converter
 	{
 		private Image image;
 		private bool scale = true;
-		private Bitmap bmp;
+		private Bitmap[] bmpFrames;
 		private byte[] data;
 		private int frames;
 
@@ -34,9 +34,9 @@ namespace RGB565Converter
 				try
 				{
 					image = Image.FromFile(ImagePath);	//只用于输入，转换为Bitmap后，后续操作都使用Bitmap完成
-					bmp = (Bitmap)image;
-					FrameDimension frameDimension = new FrameDimension(bmp.FrameDimensionsList[0]);
-					frames = bmp.GetFrameCount(frameDimension);
+					Bitmap loadedBitmap = (Bitmap)image;
+					FrameDimension frameDimension = new FrameDimension(loadedBitmap.FrameDimensionsList[0]);
+					frames = loadedBitmap.GetFrameCount(frameDimension);
 					PictureSetup();
 				}
 				catch (Exception)
@@ -56,7 +56,6 @@ namespace RGB565Converter
 				if (!string.IsNullOrEmpty(ImagePath)&&!string.IsNullOrWhiteSpace(ImagePath)) 
 				{
 					image = Image.FromFile(ImagePath);
-					bmp = (Bitmap)image;
 					PictureSetup();
 				}
 			}
@@ -122,7 +121,7 @@ namespace RGB565Converter
 			TopClipBox.DecimalPlaces = 0;
 			BottomClipBox.DecimalPlaces = 0;
 
-			pictureBox1.Image = bmp;
+			pictureBox1.Image = bmpFrames != null && bmpFrames.Length > 0 ? bmpFrames[0] : null;
 		}
 
 		private void outputPathButton_Click(object sender, EventArgs e)
@@ -238,10 +237,29 @@ namespace RGB565Converter
 		/// </summary>
 		private void UpdateImage()
 		{
-			//TODO:用Graphics裁剪缩放会丢失动画信息，需要改写成把每一帧写入Bitmap数组
-			Bitmap tmpBmp = BitmapTransformService.ClipImage(image, (int)LeftClipBox.Value, (int)TopClipBox.Value, (int)RightClipBox.Value, (int)BottomClipBox.Value, frames);
-			bmp = BitmapTransformService.ResizeImage(tmpBmp, (int)XpxBox.Value, (int)YpxBox.Value, frames);
-			pictureBox1.Image = bmp;
+			Bitmap[] oldFrames = bmpFrames;
+			Bitmap[] tmpFrames = BitmapTransformService.ClipImage(image, (int)LeftClipBox.Value, (int)TopClipBox.Value, (int)RightClipBox.Value, (int)BottomClipBox.Value, frames);
+			try
+			{
+				bmpFrames = BitmapTransformService.ResizeImage(tmpFrames, (int)XpxBox.Value, (int)YpxBox.Value);
+			}
+			finally
+			{
+				if (tmpFrames != null)
+				{
+					foreach (Bitmap f in tmpFrames) f?.Dispose();
+				}
+			}
+
+			if (oldFrames != null)
+			{
+				foreach (Bitmap f in oldFrames) f?.Dispose();
+			}
+
+			if (bmpFrames != null && bmpFrames.Length > 0)
+			{
+				pictureBox1.Image = bmpFrames[0];
+			}
 		}
 
 		private void convertButton_Click(object sender, EventArgs e)
@@ -269,7 +287,7 @@ namespace RGB565Converter
 				return;
 			}
 
-			data = BitmapFrameExtractor.Extract24BgrFrameData(bmp, frames);
+			data = BitmapFrameExtractor.Extract24BgrFrameData(bmpFrames);
 			progressBar1.SetState(1);
 			backgroundWorker1.RunWorkerAsync();
 		}
@@ -289,7 +307,7 @@ namespace RGB565Converter
 				return;
 			}
 			string imageName = Path.GetFileNameWithoutExtension(outputPathBox.Text);
-			string[] fileString = Rgb565HeaderBuilder.BuildHeaderLines(imageName, bmp.Width, bmp.Height, frames, e.Result as string);
+			string[] fileString = Rgb565HeaderBuilder.BuildHeaderLines(imageName, bmpFrames[0].Width, bmpFrames[0].Height, bmpFrames.Length, e.Result as string);
 			statusLabel.Text = "写入文件中...";
 			File.WriteAllLines(outputPathBox.Text, fileString);
 			statusLabel.Text = "转换完成";
@@ -299,9 +317,9 @@ namespace RGB565Converter
 		{
 			e.Result = Rgb565Encoder.ConvertBgr24FramesToRgb565String(
 				data,
-				bmp.Width,
-				bmp.Height,
-				frames,
+				bmpFrames[0].Width,
+				bmpFrames[0].Height,
+				bmpFrames.Length,
 				new Progress<int>(progress => backgroundWorker1.ReportProgress(progress)),
 				() => backgroundWorker1.CancellationPending);
 

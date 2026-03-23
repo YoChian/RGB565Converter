@@ -7,25 +7,34 @@ namespace RGB565Converter.Core
 {
 	public static class BitmapFrameExtractor
 	{
-		public static byte[] Extract24BgrFrameData(Bitmap source, int frameCount)
+		/// <summary>
+		/// Extracts raw 24-bit BGR pixel data from an array of single-frame bitmaps.
+		/// Each frame's pixel data is stored sequentially in the returned byte array.
+		/// </summary>
+		public static byte[] Extract24BgrFrameData(Bitmap[] frames)
 		{
-			if (source == null)
+			if (frames == null)
 			{
-				throw new ArgumentNullException(nameof(source));
+				throw new ArgumentNullException(nameof(frames));
 			}
 
-			FrameDimension frameDimension = new FrameDimension(source.FrameDimensionsList[0]);
-			int frameSize = source.Width * source.Height * 3;
-			byte[] rawData = new byte[frameSize * frameCount];
-
-			for (int frame = 0; frame < frameCount; frame++)
+			if (frames.Length == 0)
 			{
-				source.SelectActiveFrame(frameDimension, frame);
-				using (Bitmap frameBitmap = new Bitmap(source.Width, source.Height, PixelFormat.Format24bppRgb))
+				throw new ArgumentException("At least one frame is required.", nameof(frames));
+			}
+
+			int frameWidth = frames[0].Width;
+			int frameHeight = frames[0].Height;
+			int frameSize = frameWidth * frameHeight * 3;
+			byte[] rawData = new byte[frameSize * frames.Length];
+
+			for (int frame = 0; frame < frames.Length; frame++)
+			{
+				using (Bitmap frameBitmap = new Bitmap(frameWidth, frameHeight, PixelFormat.Format24bppRgb))
 				{
 					using (Graphics graphics = Graphics.FromImage(frameBitmap))
 					{
-						graphics.DrawImage(source, 0, 0, source.Width, source.Height);
+						graphics.DrawImage(frames[frame], 0, 0, frameWidth, frameHeight);
 					}
 
 					BitmapData bitmapData = frameBitmap.LockBits(
