@@ -1,15 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using RGB565Converter.Core;
 
 namespace RGB565Converter
 {
@@ -238,78 +234,13 @@ namespace RGB565Converter
 		}
 
 		/// <summary>
-		/// 缩放指定的图像
-		/// </summary>
-		/// <param name="src">源图像</param>
-		/// <param name="width">缩放后的宽度</param>
-		/// <param name="height">缩放后的高度</param>
-		/// <returns>缩放后的图像</returns>
-		private Bitmap ResizeImage(Image src, int width, int height)
-		{
-			Bitmap destBmp = new Bitmap(width, height);
-			ImageFormat srcFormat = src.RawFormat;
-			FrameDimension sfd = new FrameDimension(src.FrameDimensionsList[0]);
-			FrameDimension dfd = new FrameDimension(destBmp.FrameDimensionsList[0]);
-			Graphics g = Graphics.FromImage(destBmp);
-			//g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-			//g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-			for (int i = 0; i < frames; i++)
-			{
-				src.SelectActiveFrame(sfd, i);
-				destBmp.SelectActiveFrame(dfd, i);
-				g.DrawImage(src,
-				   new Rectangle(0, 0, width, height),
-				   new Rectangle(0, 0, src.Width, src.Height),
-				   GraphicsUnit.Pixel);
-			}
-			destBmp.SelectActiveFrame(dfd, 0);
-			g.Dispose();
-			return destBmp;
-		}
-
-		/// <summary>
-		/// 裁剪指定的图像
-		/// </summary>
-		/// <param name="src">源图像</param>
-		/// <param name="left">裁剪的左边界</param>
-		/// <param name="top">裁剪的上边界</param>
-		/// <param name="right">裁剪的右边界</param>
-		/// <param name="bottom">裁剪的下边界</param>
-		/// <returns>裁剪后的图像</returns>
-		private Bitmap ClipImage(Image src, int left, int top, int right, int bottom)
-		{
-			Bitmap destBmp = new Bitmap(src.Width - left - right, src.Height - top - bottom);
-			FrameDimension sfd = new FrameDimension(src.FrameDimensionsList[0]);
-			FrameDimension dfd = new FrameDimension(destBmp.FrameDimensionsList[0]);
-			Graphics g = Graphics.FromImage(destBmp);
-			//g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-			//g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-			//g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-			for (int i = 0; i < frames; i++)
-			{
-				src.SelectActiveFrame(sfd, i);
-				destBmp.SelectActiveFrame(dfd, i);
-				g.DrawImage(src,
-				   new Rectangle(0, 0, src.Width - left - right, src.Height - top - bottom),
-				   new Rectangle(left, top, src.Width - right, src.Height - bottom),
-				   GraphicsUnit.Pixel);
-			}
-			destBmp.SelectActiveFrame(dfd, 0);
-			g.Dispose();
-			return destBmp;
-		}
-
-		/// <summary>
 		/// 调整裁剪和缩放后实时对预览图像进行对应操作
 		/// </summary>
 		private void UpdateImage()
 		{
 			//TODO:用Graphics裁剪缩放会丢失动画信息，需要改写成把每一帧写入Bitmap数组
-			Bitmap tmpBmp = ClipImage(image, (int)LeftClipBox.Value, (int)TopClipBox.Value, (int)RightClipBox.Value, (int)BottomClipBox.Value);
-			bmp = ResizeImage(tmpBmp, (int)XpxBox.Value, (int)YpxBox.Value);
+			Bitmap tmpBmp = BitmapTransformService.ClipImage(image, (int)LeftClipBox.Value, (int)TopClipBox.Value, (int)RightClipBox.Value, (int)BottomClipBox.Value, frames);
+			bmp = BitmapTransformService.ResizeImage(tmpBmp, (int)XpxBox.Value, (int)YpxBox.Value, frames);
 			pictureBox1.Image = bmp;
 		}
 
@@ -338,19 +269,7 @@ namespace RGB565Converter
 				return;
 			}
 
-			FrameDimension frameDimension = new FrameDimension(bmp.FrameDimensionsList[0]);
-			int size = bmp.Width * bmp.Height * 3;
-			data = new byte[size * frames];
-			for (int i = 0; i < frames; i++)
-			{
-				bmp.SelectActiveFrame(frameDimension, i);
-				BitmapData bitmapData = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height),
-											ImageLockMode.ReadOnly,
-											PixelFormat.Format24bppRgb);
-				IntPtr intPtr = bitmapData.Scan0;
-				Marshal.Copy(intPtr, data, size * i, size);
-				bmp.UnlockBits(bitmapData);
-			}
+			data = BitmapFrameExtractor.Extract24BgrFrameData(bmp, frames);
 			progressBar1.SetState(1);
 			backgroundWorker1.RunWorkerAsync();
 		}
@@ -370,21 +289,7 @@ namespace RGB565Converter
 				return;
 			}
 			string imageName = Path.GetFileNameWithoutExtension(outputPathBox.Text);
-			string arrayFlag = frames > 1 ? "[]" : "";
-			string[] fileString =
-			{
-				"#if defined(__AVR__)",
-				"    #include <avr/pgmspace.h>",
-				"#elif defined(__PIC32MX__)",
-				"    #define PROGMEM",
-				"#elif defined(__arm__)",
-				"    #define PROGMEM",
-				"#endif",
-				"",
-				$"const unsigned short {imageName}{arrayFlag}[{bmp.Width*bmp.Height}] PROGMEM={{",
-				e.Result as String,
-				"};",
-			};
+			string[] fileString = Rgb565HeaderBuilder.BuildHeaderLines(imageName, bmp.Width, bmp.Height, frames, e.Result as string);
 			statusLabel.Text = "写入文件中...";
 			File.WriteAllLines(outputPathBox.Text, fileString);
 			statusLabel.Text = "转换完成";
@@ -392,34 +297,18 @@ namespace RGB565Converter
 
 		private void BackgroundWorker1_DoWork(object sender, DoWorkEventArgs e)
 		{
-			string dataString = "";
-			int width=bmp.Width;
-			int height=bmp.Height;
-			int frameSize = width * height;
-			int totalWork = frameSize * frames;
-			for (int k = 0; k < frames; k++)
+			e.Result = Rgb565Encoder.ConvertBgr24FramesToRgb565String(
+				data,
+				bmp.Width,
+				bmp.Height,
+				frames,
+				new Progress<int>(progress => backgroundWorker1.ReportProgress(progress)),
+				() => backgroundWorker1.CancellationPending);
+
+			if (backgroundWorker1.CancellationPending && e.Result == null)
 			{
-				for (int i = 0; i < height; i++)
-				{
-					for (int j = 0; j < width; j++)
-					{
-						int ptr = (j * height + i + frameSize * k) * 3;//从Bitmap转换得到的Byte数组按先列后行顺序排列，单个像素按BGR顺序排列
-						Int16 B = (Int16)((data[ptr] >> 3) & 0x001F);
-						Int16 G = (Int16)(((data[ptr + 1] >> 2) << 5) & 0x07E0);
-						Int16 R = (Int16)((data[ptr + 2] >> 3 << 11) & 0xF800);
-						Int16 colorVar = (Int16)(R | G | B);
-						dataString += $"0x{colorVar:X4}, ";
-						int progress = (i * width + j + 1 + k * frameSize) * 100 / totalWork;
-						backgroundWorker1.ReportProgress(progress);
-						if (backgroundWorker1.CancellationPending)
-						{
-							e.Cancel = true;
-							return;
-						}
-					}
-				}
+				e.Cancel = true;
 			}
-			e.Result = dataString;
 		}
 
 		private void abortButton_Click(object sender, EventArgs e)
