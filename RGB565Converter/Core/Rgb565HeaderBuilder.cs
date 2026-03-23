@@ -12,6 +12,21 @@ namespace RGB565Converter.Core
 				throw new ArgumentException("Image name is required.", nameof(imageName));
 			}
 
+			if (width <= 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(width), "Width must be greater than zero.");
+			}
+
+			if (height <= 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(height), "Height must be greater than zero.");
+			}
+
+			if (frames <= 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(frames), "Frame count must be greater than zero.");
+			}
+
 			string sanitizedImageName = SanitizeIdentifier(imageName);
 			string arrayFlag = frames > 1 ? "[]" : string.Empty;
 			return new[]
@@ -40,7 +55,10 @@ namespace RGB565Converter.Core
 			StringBuilder builder = new StringBuilder(value.Length + 1);
 			foreach (char character in value)
 			{
-				if (char.IsLetterOrDigit(character) || character == '_')
+				if ((character >= 'A' && character <= 'Z')
+					|| (character >= 'a' && character <= 'z')
+					|| (character >= '0' && character <= '9')
+					|| character == '_')
 				{
 					builder.Append(character);
 				}
